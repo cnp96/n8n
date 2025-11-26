@@ -22,6 +22,10 @@ process.env.FORCE_COLOR = '1';
  * @returns {string} Platform string (e.g., 'linux/amd64')
  */
 function getDockerPlatform() {
+	const platform = process.env.PLATFORM;
+	if (platform) return platform;
+
+	// return 'linux/amd64';
 	const arch = os.arch();
 	const dockerArch = {
 		x64: 'amd64',
@@ -121,7 +125,18 @@ const rootDir = isInScriptsDir ? path.join(__dirname, '..') : __dirname;
 
 const config = {
 	dockerfilePath: path.join(rootDir, 'docker/images/n8n/Dockerfile'),
-	imageBaseName: process.env.IMAGE_BASE_NAME || 'n8nio/n8n',
+	imageBaseName: process.env.IMAGE_BASE_NAME || 'chinmayapati/n8n',
+	imageTag: process.env.IMAGE_TAG || 'local',
+	buildContext: rootDir,
+	compiledAppDir: path.join(rootDir, 'compiled'),
+	get fullImageName() {
+		return `${this.imageBaseName}:${this.imageTag}`;
+	},
+};
+
+const runnerConfig = {
+	dockerfilePath: path.join(rootDir, 'docker/images/runners/Dockerfile'),
+	imageBaseName: process.env.IMAGE_BASE_NAME || 'chinmayapati/n8n-runner',
 	imageTag: process.env.IMAGE_TAG || 'local',
 	buildContext: rootDir,
 	compiledAppDir: path.join(rootDir, 'compiled'),
@@ -143,7 +158,7 @@ async function main() {
 	await checkPrerequisites();
 
 	// Build Docker image
-	const buildTime = await buildDockerImage();
+	const buildTime = await buildDockerImage(config);
 
 	// Get image details
 	const imageSize = await getImageSize(config.fullImageName);
@@ -154,6 +169,20 @@ async function main() {
 		platform,
 		size: imageSize,
 		buildTime,
+	});
+
+	// Build runner Docker image
+	const runnerBuildTime = await buildDockerImage(runnerConfig);
+
+	// Get image details
+	const runnerImageSize = await getImageSize(runnerConfig.fullImageName);
+
+	// Display summary
+	displaySummary({
+		imageName: runnerConfig.fullImageName,
+		platform,
+		size: runnerImageSize,
+		buildTime: runnerBuildTime,
 	});
 }
 
@@ -171,7 +200,7 @@ async function checkPrerequisites() {
 	}
 }
 
-async function buildDockerImage() {
+async function buildDockerImage(config) {
 	const startTime = Date.now();
 	const containerEngine = await getContainerEngine();
 	echo(chalk.yellow(`INFO: Building Docker image using ${containerEngine}...`));
