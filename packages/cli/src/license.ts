@@ -218,6 +218,7 @@ export class License implements LicenseProvider {
 	}
 
 	isLicensed(feature: BooleanLicenseFeature) {
+		if (feature === LICENSE_FEATURES.SHOW_NON_PROD_BANNER) return false;
 		// return this.manager?.hasFeatureEnabled(feature) ?? false;
 		return true;
 	}
@@ -417,8 +418,8 @@ export class License implements LicenseProvider {
 		// 	(entitlement) => (entitlement.productMetadata?.terms as { isMainPlan?: boolean })?.isMainPlan,
 		// );
 		return {
-			id: 'enterprise-plan',
-			productId: 'enterprise-plan',
+			id: 'enterprise',
+			productId: 'enterprise-product-id',
 			productMetadata: {
 				terms: {
 					isMainPlan: true,
